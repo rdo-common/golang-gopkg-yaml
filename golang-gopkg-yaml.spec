@@ -10,7 +10,7 @@ Summary:        Enables Go programs to comfortably encode and decode YAML values
 License:        LGPLv3 with exceptions
 URL:            http://%{import_path}
 Source0:        https://github.com/go-yaml/yaml/archive/%{commit}/yaml-%{commit}.tar.gz
-BuildArch:      noarch
+ExclusiveArch:  %{ix86} x86_64 %{arm}
 
 %description
 %{summary}
