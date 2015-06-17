@@ -12,7 +12,7 @@
 
 Name:           golang-gopkg-yaml
 Version:        1
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Enables Go programs to comfortably encode and decode YAML values
 License:        LGPLv3 with exceptions
 URL:            http://%{import_path}
@@ -105,6 +105,9 @@ popd
 %{gopath}/src/%{import_path_sec}
 
 %changelog
+* Wed Jun 17 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1-6
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
+
 * Wed Dec 10 2014 jchaloup <jchaloup@redhat.com> - 1-5
 - Update to gopkg.in/check.v2 but still provide gopkg.in/check.v1
   related: #1141875
