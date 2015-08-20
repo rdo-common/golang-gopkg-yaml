@@ -1,6 +1,38 @@
+%if 0%{?fedora} || 0%{?rhel} == 6
+%global with_devel 1
+%global with_bundled 0
+%global with_debug 0
+%global with_check 1
+%global with_unit_test 1
+%else
+%global with_devel 0
+%global with_bundled 0
+%global with_debug 0
+%global with_check 0
+%global with_unit_test 0
+%endif
+
+%if 0%{?with_debug}
+%global _dwz_low_mem_die_limit 0
+%else
 %global debug_package   %{nil}
+%endif
+
+%define copying() \
+%if 0%{?fedora} >= 21 || 0%{?rhel} >= 7 \
+%license %{*} \
+%else \
+%doc %{*} \
+%endif
+
+%global provider        github
+%global provider_tld    com
+%global project         go-yaml
+%global repo            yaml
+%global provider_prefix %{provider}.%{provider_tld}/%{project}/%{repo}
 %global commit          d466437aa4adc35830964cffc5b5f262c63ddcb4
 %global shortcommit     %(c=%{commit}; echo ${c:0:7})
+
 %global import_path     gopkg.in/v2/yaml
 %global import_path_sec gopkg.in/yaml.v2
 
@@ -12,26 +44,40 @@
 
 Name:           golang-gopkg-yaml
 Version:        1
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Enables Go programs to comfortably encode and decode YAML values
 License:        LGPLv3 with exceptions
-URL:            http://%{import_path}
-Source0:        https://github.com/go-yaml/yaml/archive/%{commit}/yaml-%{commit}.tar.gz
-Source1:        https://github.com/go-yaml/yaml/archive/%{v1_commit}/yaml-%{v1_commit}.tar.gz
-%if 0%{?fedora} >= 19 || 0%{?rhel} >= 7
-BuildArch:      noarch
+URL:            https://%{provider_prefix}
+Source0:        https://%{provider_prefix}/archive/%{commit}/yaml-%{commit}.tar.gz
+Source1:        https://%{provider_prefix}/archive/%{v1_commit}/yaml-%{v1_commit}.tar.gz
+
+# If go_arches not defined fall through to implicit golang archs
+%if 0%{?go_arches:1}
+ExclusiveArch:  %{go_arches}
 %else
-ExclusiveArch:  %{ix86} x86_64 %{arm}
+ExclusiveArch:   %{ix86} x86_64 %{arm}
+%endif
+# If gccgo_arches does not fit or is not defined fall through to golang
+%ifarch 0%{?gccgo_arches}
+BuildRequires:   gcc-go >= %{gccgo_min_vers}
+%else
+BuildRequires:   golang
 %endif
 
 %description
 %{summary}
 
+%if 0%{?with_devel}
 %package devel
-BuildRequires:  golang >= 1.2.1-3
-BuildRequires:  golang(gopkg.in/check.v1)
-Requires:       golang >= 1.2.1-3
 Summary:        Enables Go programs to comfortably encode and decode YAML values
+BuildArch:      noarch
+
+%if 0%{?with_check}
+BuildRequires:  golang(gopkg.in/check.v1)
+%endif
+
+Requires:       golang(gopkg.in/check.v1)
+
 Provides:       golang(%{v1_import_path}) = %{version}-%{release}
 Provides:       golang(%{v1_import_path_sec}) = %{version}-%{release}
 
@@ -46,11 +92,19 @@ anchors, tags, etc. There are still a few missing bits, such as document
 merging, base-60 floats (huh?), and multi-document unmarshalling. These
 features are not hard to add, and will be introduced as necessary.
 
+This package contains library source intended for
+building other packages which use import path with
+%{v1_import_path} prefix.
+
 %package devel-v2
-BuildRequires:  golang >= 1.2.1-3
-BuildRequires:  golang(gopkg.in/check.v1)
-Requires:       golang >= 1.2.1-3
 Summary:        Enables Go programs to comfortably encode and decode YAML values
+
+%if 0%{?with_check}
+BuildRequires:  golang(gopkg.in/check.v1)
+%endif
+
+Requires:       golang(gopkg.in/check.v1)
+
 Provides:       golang(%{import_path}) = %{version}-%{release}
 Provides:       golang(%{import_path_sec}) = %{version}-%{release}
 
@@ -66,45 +120,134 @@ Multi-document unmarshalling is not yet implemented, and base-60 floats
 from YAML 1.1 are purposefully not supported since they're a poor design
  and are gone in YAML 1.2.
 
+This package contains library source intended for
+building other packages which use import path with
+%{import_path} prefix.
+%endif
+
+%if 0%{?with_unit_test}
+%package unit-test
+Summary:         Unit tests for %{name} package
+# If go_arches not defined fall through to implicit golang archs
+%if 0%{?go_arches:1}
+ExclusiveArch:  %{go_arches}
+%else
+ExclusiveArch:   %{ix86} x86_64 %{arm}
+%endif
+# If gccgo_arches does not fit or is not defined fall through to golang
+%ifarch 0%{?gccgo_arches}
+BuildRequires:   gcc-go >= %{gccgo_min_vers}
+%else
+BuildRequires:   golang
+%endif
+
+%if 0%{?with_check}
+#Here comes all BuildRequires: PACKAGE the unit tests
+#in %%check section need for running
+%endif
+
+# test subpackage tests code from devel subpackage
+Requires:        %{name}-devel = %{version}-%{release}
+
+%description unit-test
+%{summary}
+
+This package contains unit tests for project
+providing packages with %{import_path} prefix.
+%endif
 
 %prep
-%setup -n yaml-%{commit} -q
-%setup -n yaml-%{v1_commit} -T -b 1 
+%setup -q -n yaml-%{commit}
+%setup -q -n yaml-%{v1_commit} -T -b 1
 
 %build
 
 %install
+# source codes for building projects
+%if 0%{?with_devel}
 install -d -p %{buildroot}/%{gopath}/src/%{v1_import_path}/
-cp -pav *.go %{buildroot}/%{gopath}/src/%{v1_import_path}/
 install -d -p %{buildroot}/%{gopath}/src/%{v1_import_path_sec}/
-cp -pav *.go %{buildroot}/%{gopath}/src/%{v1_import_path_sec}/
-
+# find all *.go but no *_test.go files and generate devel.file-list
+for file in $(find . -iname "*.go" \! -iname "*_test.go") ; do
+    install -d -p %{buildroot}/%{gopath}/src/%{v1_import_path}/$(dirname $file)
+    cp -pav $file %{buildroot}/%{gopath}/src/%{v1_import_path}/$file
+    echo "%%{gopath}/src/%%{v1_import_path}/$file" >> v1_devel.file-list
+    install -d -p %{buildroot}/%{gopath}/src/%{v1_import_path_sec}/$(dirname $file)
+    cp -pav $file %{buildroot}/%{gopath}/src/%{v1_import_path_sec}/$file
+    echo "%%{gopath}/src/%%{v1_import_path_sec}/$file" >> v1_devel.file-list
+done
 pushd ../yaml-%{commit}
 install -d -p %{buildroot}/%{gopath}/src/%{import_path}/
-cp -pav *.go %{buildroot}/%{gopath}/src/%{import_path}/
 install -d -p %{buildroot}/%{gopath}/src/%{import_path_sec}/
-cp -pav *.go %{buildroot}/%{gopath}/src/%{import_path_sec}/
+# find all *.go but no *_test.go files and generate devel.file-list
+for file in $(find . -iname "*.go" \! -iname "*_test.go") ; do
+    install -d -p %{buildroot}/%{gopath}/src/%{import_path}/$(dirname $file)
+    cp -pav $file %{buildroot}/%{gopath}/src/%{import_path}/$file
+    echo "%%{gopath}/src/%%{import_path}/$file" >> ../yaml-%{v1_commit}/devel.file-list
+    install -d -p %{buildroot}/%{gopath}/src/%{import_path_sec}/$(dirname $file)
+    cp -pav $file %{buildroot}/%{gopath}/src/%{import_path_sec}/$file
+    echo "%%{gopath}/src/%%{import_path_sec}/$file" >> ../yaml-%{v1_commit}/devel.file-list
+done
 popd
+%endif
+
+# testing files for this project
+%if 0%{?with_unit_test}
+install -d -p %{buildroot}/%{gopath}/src/%{import_path}/
+# find all *_test.go files and generate unit-test.file-list
+for file in $(find . -iname "*_test.go"); do
+    install -d -p %{buildroot}/%{gopath}/src/%{import_path}/$(dirname $file)
+    cp -pav $file %{buildroot}/%{gopath}/src/%{import_path}/$file
+    echo "%%{gopath}/src/%%{import_path}/$file" >> unit-test.file-list
+done
+%endif
 
 %check
-GOPATH=%{buildroot}%{gopath}:%{gopath} go test %{v1_import_path_sec}
+%if 0%{?with_check} && 0%{?with_unit_test} && 0%{?with_devel}
+%ifarch 0%{?gccgo_arches}
+function gotest { %{gcc_go_test} "$@"; }
+%else
+%if 0%{?golang_test:1}
+function gotest { %{golang_test} "$@"; }
+%else
+function gotest { go test "$@"; }
+%endif
+%endif
+
+export GOPATH=%{buildroot}/%{gopath}:%{gopath}
+gotest %{v1_import_path_sec}
 pushd ../yaml-%{v1_commit}
-GOPATH=%{buildroot}%{gopath}:%{gopath} go test %{import_path_sec}
+gotest %{import_path_sec}
 popd
+%endif
 
-%files devel
-%doc LICENSE LICENSE.libyaml README.md
+%if 0%{?with_devel}
+%files devel -f v1_devel.file-list
+%copying LICENSE LICENSE.libyaml
+%doc README.md
 %dir %{gopath}/src/gopkg.in/v1
-%{gopath}/src/%{v1_import_path}
-%{gopath}/src/%{v1_import_path_sec}
+%dir %{gopath}/src/%{v1_import_path}
+%dir %{gopath}/src/%{v1_import_path_sec}
 
-%files devel-v2
-%doc LICENSE LICENSE.libyaml README.md
+%files devel-v2 -f devel.file-list
+%copying LICENSE LICENSE.libyaml
+%doc README.md
 %dir %{gopath}/src/gopkg.in/v2
-%{gopath}/src/%{import_path}
-%{gopath}/src/%{import_path_sec}
+%dir %{gopath}/src/%{import_path}
+%dir %{gopath}/src/%{import_path_sec}
+%endif
+
+%if 0%{?with_unit_test}
+%files unit-test -f unit-test.file-list
+%copying LICENSE LICENSE.libyaml
+%doc README.md
+%endif
 
 %changelog
+* Thu Aug 20 2015 jchaloup <jchaloup@redhat.com> - 1-7
+- Update spec file to spec-2.0
+  resolves: #1250524
+
 * Wed Jun 17 2015 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1-6
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_23_Mass_Rebuild
 
