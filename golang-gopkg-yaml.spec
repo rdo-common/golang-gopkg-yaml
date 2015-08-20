@@ -44,7 +44,7 @@
 
 Name:           golang-gopkg-yaml
 Version:        1
-Release:        7%{?dist}
+Release:        8%{?dist}
 Summary:        Enables Go programs to comfortably encode and decode YAML values
 License:        LGPLv3 with exceptions
 URL:            https://%{provider_prefix}
@@ -98,6 +98,7 @@ building other packages which use import path with
 
 %package devel-v2
 Summary:        Enables Go programs to comfortably encode and decode YAML values
+BuildArch:      noarch
 
 %if 0%{?with_check}
 BuildRequires:  golang(gopkg.in/check.v1)
@@ -148,6 +149,7 @@ BuildRequires:   golang
 
 # test subpackage tests code from devel subpackage
 Requires:        %{name}-devel = %{version}-%{release}
+Requires:        %{name}-devel-v2 = %{version}-%{release}
 
 %description unit-test
 %{summary}
@@ -193,13 +195,21 @@ popd
 
 # testing files for this project
 %if 0%{?with_unit_test}
+install -d -p %{buildroot}/%{gopath}/src/%{v1_import_path}/
 install -d -p %{buildroot}/%{gopath}/src/%{import_path}/
 # find all *_test.go files and generate unit-test.file-list
 for file in $(find . -iname "*_test.go"); do
+    install -d -p %{buildroot}/%{gopath}/src/%{v1_import_path}/$(dirname $file)
+    cp -pav $file %{buildroot}/%{gopath}/src/%{v1_import_path}/$file
+    echo "%%{gopath}/src/%%{v1_import_path}/$file" >> unit-test.file-list
+done
+pushd ../yaml-%{commit}
+for file in $(find . -iname "*_test.go"); do
     install -d -p %{buildroot}/%{gopath}/src/%{import_path}/$(dirname $file)
     cp -pav $file %{buildroot}/%{gopath}/src/%{import_path}/$file
-    echo "%%{gopath}/src/%%{import_path}/$file" >> unit-test.file-list
+    echo "%%{gopath}/src/%%{import_path}/$file" >> ../yaml-%{v1_commit}/unit-test.file-list
 done
+popd
 %endif
 
 %check
@@ -244,6 +254,11 @@ popd
 %endif
 
 %changelog
+* Thu Aug 20 2015 jchaloup <jchaloup@redhat.com> - 1-8
+- Choose the correct architecture
+- Update unit-test subpackage
+  related: #1250524
+
 * Thu Aug 20 2015 jchaloup <jchaloup@redhat.com> - 1-7
 - Update spec file to spec-2.0
   resolves: #1250524
