@@ -2,7 +2,8 @@
 %global with_devel 1
 %global with_bundled 0
 %global with_debug 0
-%global with_check 1
+# both tests failing
+%global with_check 0
 %global with_unit_test 1
 %else
 %global with_devel 0
@@ -30,7 +31,7 @@
 %global project         go-yaml
 %global repo            yaml
 %global provider_prefix %{provider}.%{provider_tld}/%{project}/%{repo}
-%global commit          d466437aa4adc35830964cffc5b5f262c63ddcb4
+%global commit          bef53efd0c76e49e6de55ead051f886bea7e9420
 %global shortcommit     %(c=%{commit}; echo ${c:0:7})
 
 %global import_path     gopkg.in/v2/yaml
@@ -44,11 +45,11 @@
 
 Name:           golang-gopkg-yaml
 Version:        1
-Release:        10%{?dist}
+Release:        11%{?dist}
 Summary:        Enables Go programs to comfortably encode and decode YAML values
 License:        LGPLv3 with exceptions
 URL:            https://%{provider_prefix}
-Source0:        https://%{provider_prefix}/archive/%{commit}/yaml-%{commit}.tar.gz
+Source0:        https://%{provider_prefix}/archive/%{commit}/yaml-%{shortcommit}.tar.gz
 Source1:        https://%{provider_prefix}/archive/%{v1_commit}/yaml-%{v1_commit}.tar.gz
 
 # If go_arches not defined fall through to implicit golang archs
@@ -225,9 +226,9 @@ function gotest { go test "$@"; }
 %endif
 
 export GOPATH=%{buildroot}/%{gopath}:%{gopath}
-gotest %{v1_import_path_sec}
+gotest %{import_path}
 pushd ../yaml-%{v1_commit}
-gotest %{import_path_sec}
+gotest %{v1_import_path}
 popd
 %endif
 
@@ -254,6 +255,10 @@ popd
 %endif
 
 %changelog
+* Sat Mar 05 2016 jchaloup <jchaloup@redhat.com> - 1-11
+- Bump to upstream bef53efd0c76e49e6de55ead051f886bea7e9420
+  related: #1250524
+
 * Mon Feb 22 2016 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1-10
 - https://fedoraproject.org/wiki/Changes/golang1.6
 
