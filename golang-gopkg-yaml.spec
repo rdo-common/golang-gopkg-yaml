@@ -31,7 +31,7 @@
 %global project         go-yaml
 %global repo            yaml
 %global provider_prefix %{provider}.%{provider_tld}/%{project}/%{repo}
-%global commit          bef53efd0c76e49e6de55ead051f886bea7e9420
+%global commit          53feefa2559fb8dfa8d81baad31be332c97d6c77
 %global shortcommit     %(c=%{commit}; echo ${c:0:7})
 
 %global import_path     gopkg.in/v2/yaml
@@ -42,28 +42,21 @@
 %global v1_import_path     gopkg.in/v1/yaml
 %global v1_import_path_sec gopkg.in/yaml.v1
 
+%global devel_main      golang-gopkg-yaml-devel-v2
 
 Name:           golang-gopkg-yaml
 Version:        1
-Release:        11%{?dist}
+Release:        12%{?dist}
 Summary:        Enables Go programs to comfortably encode and decode YAML values
 License:        LGPLv3 with exceptions
 URL:            https://%{provider_prefix}
 Source0:        https://%{provider_prefix}/archive/%{commit}/yaml-%{shortcommit}.tar.gz
 Source1:        https://%{provider_prefix}/archive/%{v1_commit}/yaml-%{v1_commit}.tar.gz
 
-# If go_arches not defined fall through to implicit golang archs
-%if 0%{?go_arches:1}
-ExclusiveArch:  %{go_arches}
-%else
-ExclusiveArch:   %{ix86} x86_64 %{arm}
-%endif
-# If gccgo_arches does not fit or is not defined fall through to golang
-%ifarch 0%{?gccgo_arches}
-BuildRequires:   gcc-go >= %{gccgo_min_vers}
-%else
-BuildRequires:   golang
-%endif
+# e.g. el6 has ppc64 arch without gcc-go, so EA tag is required
+ExclusiveArch:  %{?go_arches:%{go_arches}}%{!?go_arches:%{ix86} x86_64 %{arm}}
+# If go_compiler is not set to 1, there is no virtual provide. Use golang instead.
+BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
 
 %description
 %{summary}
@@ -74,10 +67,7 @@ Summary:        Enables Go programs to comfortably encode and decode YAML values
 BuildArch:      noarch
 
 %if 0%{?with_check}
-BuildRequires:  golang(gopkg.in/check.v1)
 %endif
-
-Requires:       golang(gopkg.in/check.v1)
 
 Provides:       golang(%{v1_import_path}) = %{version}-%{release}
 Provides:       golang(%{v1_import_path_sec}) = %{version}-%{release}
@@ -102,10 +92,7 @@ Summary:        Enables Go programs to comfortably encode and decode YAML values
 BuildArch:      noarch
 
 %if 0%{?with_check}
-BuildRequires:  golang(gopkg.in/check.v1)
 %endif
-
-Requires:       golang(gopkg.in/check.v1)
 
 Provides:       golang(%{import_path}) = %{version}-%{release}
 Provides:       golang(%{import_path_sec}) = %{version}-%{release}
@@ -130,23 +117,16 @@ building other packages which use import path with
 %if 0%{?with_unit_test}
 %package unit-test
 Summary:         Unit tests for %{name} package
-# If go_arches not defined fall through to implicit golang archs
-%if 0%{?go_arches:1}
-ExclusiveArch:  %{go_arches}
-%else
-ExclusiveArch:   %{ix86} x86_64 %{arm}
-%endif
-# If gccgo_arches does not fit or is not defined fall through to golang
-%ifarch 0%{?gccgo_arches}
-BuildRequires:   gcc-go >= %{gccgo_min_vers}
-%else
-BuildRequires:   golang
-%endif
+# If go_compiler is not set to 1, there is no virtual provide. Use golang instead.
+BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
 
 %if 0%{?with_check}
 #Here comes all BuildRequires: PACKAGE the unit tests
 #in %%check section need for running
+BuildRequires:  golang(gopkg.in/check.v1)
 %endif
+
+Requires:  golang(gopkg.in/check.v1)
 
 # test subpackage tests code from devel subpackage
 Requires:        %{name}-devel = %{version}-%{release}
@@ -215,20 +195,15 @@ popd
 
 %check
 %if 0%{?with_check} && 0%{?with_unit_test} && 0%{?with_devel}
-%ifarch 0%{?gccgo_arches}
-function gotest { %{gcc_go_test} "$@"; }
-%else
-%if 0%{?golang_test:1}
-function gotest { %{golang_test} "$@"; }
-%else
-function gotest { go test "$@"; }
-%endif
+export GOPATH=%{buildroot}/%{gopath}:%{gopath}
+
+%if ! 0%{?gotest:1}
+%global gotest go test
 %endif
 
-export GOPATH=%{buildroot}/%{gopath}:%{gopath}
-gotest %{import_path}
+%gotest %{import_path}
 pushd ../yaml-%{v1_commit}
-gotest %{v1_import_path}
+%gotest %{v1_import_path}
 popd
 %endif
 
@@ -255,6 +230,10 @@ popd
 %endif
 
 %changelog
+* Sun May 15 2016 jchaloup <jchaloup@redhat.com> - 1-12
+- Bump to upstream 53feefa2559fb8dfa8d81baad31be332c97d6c77
+  related: #1250524
+
 * Sat Mar 05 2016 jchaloup <jchaloup@redhat.com> - 1-11
 - Bump to upstream bef53efd0c76e49e6de55ead051f886bea7e9420
   related: #1250524
