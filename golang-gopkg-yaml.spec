@@ -6,24 +6,17 @@
 %global with_check 0
 %global with_unit_test 1
 %else
-%global with_devel 0
+%global with_devel 1
 %global with_bundled 0
 %global with_debug 0
 %global with_check 0
-%global with_unit_test 0
+%global with_unit_test 1
 %endif
 
 %if 0%{?with_debug}
 %global _dwz_low_mem_die_limit 0
 %else
 %global debug_package   %{nil}
-%endif
-
-%define copying() \
-%if 0%{?fedora} >= 21 || 0%{?rhel} >= 7 \
-%license %{*} \
-%else \
-%doc %{*} \
 %endif
 
 %global provider        github
@@ -46,7 +39,7 @@
 
 Name:           golang-gopkg-yaml
 Version:        1
-Release:        13%{?dist}
+Release:        14%{?dist}
 Summary:        Enables Go programs to comfortably encode and decode YAML values
 License:        LGPLv3 with exceptions
 URL:            https://%{provider_prefix}
@@ -207,16 +200,19 @@ pushd ../yaml-%{v1_commit}
 popd
 %endif
 
+#define license tag if not already defined
+%{!?_licensedir:%global license %doc}
+
 %if 0%{?with_devel}
 %files devel -f v1_devel.file-list
-%copying LICENSE LICENSE.libyaml
+%license LICENSE LICENSE.libyaml
 %doc README.md
 %dir %{gopath}/src/gopkg.in/v1
 %dir %{gopath}/src/%{v1_import_path}
 %dir %{gopath}/src/%{v1_import_path_sec}
 
 %files devel-v2 -f devel.file-list
-%copying LICENSE LICENSE.libyaml
+%license LICENSE LICENSE.libyaml
 %doc README.md
 %dir %{gopath}/src/gopkg.in/v2
 %dir %{gopath}/src/%{import_path}
@@ -225,11 +221,15 @@ popd
 
 %if 0%{?with_unit_test}
 %files unit-test -f unit-test.file-list
-%copying LICENSE LICENSE.libyaml
+%license LICENSE LICENSE.libyaml
 %doc README.md
 %endif
 
 %changelog
+* Thu Aug 25 2016 jchaloup <jchaloup@redhat.com> - 1-14
+- Enable devel and unit-test for epel7
+  related: #1250524
+
 * Thu Jul 21 2016 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1-13
 - https://fedoraproject.org/wiki/Changes/golang1.7
 
